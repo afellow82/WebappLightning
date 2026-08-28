@@ -45,7 +45,8 @@
   }
 
   .app{
-    height: 100dvh;
+    position: fixed;
+    inset: 0;
     display: flex;
     flex-direction: column;
     padding-top: var(--safe-top);
@@ -616,7 +617,7 @@
           </select>
         </div>
       </div>
-      <div class="version-info" id="versionInfo">Version: 1.02 (28.08.2026)</div>
+      <div class="version-info" id="versionInfo">Version: 1.03 (28.08.2026)</div>
     </div>
 
     <button id="panelClose" data-i18n="closeBtn">Schließen</button>
@@ -931,7 +932,7 @@
      Tab bar -> placeholder panels
      (real content for Wissen / Hilfe / Einstellungen follows later)
   --------------------------------------------------------- */
-  const APP_VERSION = '1.02 (28.08.2026)';
+  const APP_VERSION = '1.03 (28.08.2026)';
 
   const overlay = document.getElementById('overlay');
   const panelTitle = document.getElementById('panelTitle');
