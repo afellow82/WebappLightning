@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#080b1e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Gewitterabstand</title>
+<title>Blitzmessung</title>
 
 <style>
   :root{
@@ -87,8 +87,10 @@
   .strike-btn{
     position: relative;
     z-index: 1;
-    width: min(62vw, 46vh, 300px);
-    height: min(62vw, 46vh, 300px);
+    width: min(62vw, 46dvh, 300px);
+    height: min(62vw, 46dvh, 300px);
+    aspect-ratio: 1 / 1;
+    flex: 0 0 auto;
     border-radius: 50%;
     border: none;
     display: flex;
@@ -143,6 +145,35 @@
   }
 
   .timer-readout.active{
+    color: var(--thunder);
+  }
+
+  .cancel-btn{
+    position: absolute;
+    right: 18px;
+    bottom: 14px;
+    z-index: 2;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 16px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    font-family: sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .cancel-btn.visible{
+    display: flex;
+  }
+
+  .cancel-btn:active{
+    background: var(--thunder-dim);
     color: var(--thunder);
   }
 
@@ -471,6 +502,8 @@
     </button>
 
     <div class="timer-readout" id="timerReadout">0,00 s</div>
+
+    <button class="cancel-btn" id="cancelBtn" data-i18n="btnCancel">Abbruch</button>
   </main>
 
   <!-- Section 2: log -->
@@ -565,6 +598,7 @@
     <!-- Help content -->
     <div id="panelHelpContent" style="display:none;">
       <p data-i18n="helpPara1">Ein Klick auf den Button „Blitz" startet eine Zeitmessung, ein Klick auf „Donner" beendet sie. Aus der gemessenen Zeit berechnet die App über die Schallgeschwindigkeit, wie weit der Blitz entfernt eingeschlagen ist.</p>
+      <p data-i18n="helpParaCancel">Während die Messung läuft, erscheint unten rechts die Schaltfläche „Abbruch". Damit lässt sich die Messung verwerfen, falls doch kein Donner zu hören war – der Zeitmesser wird zurückgesetzt, ohne dass ein Eintrag in der Tabelle angelegt wird.</p>
       <p data-i18n="helpPara2">Es erfolgt keine Speicherung der Daten – die App wird bei jedem Öffnen neu initialisiert.</p>
       <p data-i18n="helpPara3">In den Einstellungen kannst du die Sprache der App ändern.</p>
     </div>
@@ -580,7 +614,7 @@
           </select>
         </div>
       </div>
-      <div class="version-info" id="versionInfo">Version: 0.01</div>
+      <div class="version-info" id="versionInfo">Version: 1.01 (28.08.2026)</div>
     </div>
 
     <button id="panelClose" data-i18n="closeBtn">Schließen</button>
@@ -613,8 +647,10 @@
       panelPlaceholder: 'Dieser Bereich wird als Nächstes eingerichtet.',
       closeBtn: 'Schließen',
       helpPara1: 'Ein Klick auf den Button „Blitz" startet eine Zeitmessung, ein Klick auf „Donner" beendet sie. Aus der gemessenen Zeit berechnet die App über die Schallgeschwindigkeit, wie weit der Blitz entfernt eingeschlagen ist.',
+      helpParaCancel: 'Während die Messung läuft, erscheint unten rechts die Schaltfläche „Abbruch". Damit lässt sich die Messung verwerfen, falls doch kein Donner zu hören war – der Zeitmesser wird zurückgesetzt, ohne dass ein Eintrag in der Tabelle angelegt wird.',
       helpPara2: 'Es erfolgt keine Speicherung der Daten – die App wird bei jedem Öffnen neu initialisiert.',
       helpPara3: 'In den Einstellungen kannst du die Sprache der App ändern.',
+      btnCancel: 'Abbruch',
       faqQ1: 'Wie schnell breitet sich der Schall aus?',
       faqA1: 'Schall bewegt sich in der Luft mit rund 343 m/s (etwa 1.235 km/h) – deutlich langsamer als das Licht, das nahezu augenblicklich ankommt. Daher lässt sich aus dem Abstand zwischen Blitz und Donner die Entfernung berechnen.',
       faqQ2: 'Wie stark ist der Strom in einem Blitz?',
@@ -652,6 +688,8 @@
       panelPlaceholder: 'This section will be set up next.',
       closeBtn: 'Close',
       helpPara1: 'Tapping the "Lightning" button starts a time measurement, and tapping "Thunder" stops it. From the measured time, the app uses the speed of sound to calculate how far away the lightning struck.',
+      helpParaCancel: 'While a measurement is running, a "Cancel" button appears in the bottom right. Use it to discard the measurement if no thunder was heard after all – the timer resets and no entry is added to the table.',
+      btnCancel: 'Cancel',
       helpPara2: 'No data is stored — the app resets every time it is opened.',
       helpPara3: 'You can change the app\'s language in Settings.',
       faqQ1: 'How fast does sound travel?',
@@ -729,6 +767,7 @@
   const logBody = document.getElementById('logBody');
   const ringsContainer = document.getElementById('ringsContainer');
   const flashEl = document.getElementById('flash');
+  const cancelBtn = document.getElementById('cancelBtn');
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -797,6 +836,8 @@
     fireFlash();
     vibrate(15);
 
+    cancelBtn.classList.add('visible');
+
     updateTimerDisplay();
     tickHandle = setInterval(updateTimerDisplay, 30);
     ringHandle = setInterval(spawnRing, 550);
@@ -817,10 +858,29 @@
     fitButtonLabel();
     timerReadout.classList.remove('active');
     timerReadout.textContent = formatDuration(0);
+    cancelBtn.classList.remove('visible');
 
     vibrate([15, 60, 15]);
 
     addLogRow(new Date(), elapsedSeconds);
+  }
+
+  function cancelMeasurement(){
+    measuring = false;
+
+    clearInterval(tickHandle);
+    clearInterval(ringHandle);
+    tickHandle = null;
+    ringHandle = null;
+
+    strikeBtn.classList.remove('measuring');
+    btnLabel.textContent = t('btnLightning');
+    fitButtonLabel();
+    timerReadout.classList.remove('active');
+    timerReadout.textContent = formatDuration(0);
+    cancelBtn.classList.remove('visible');
+
+    vibrate(15);
   }
 
   function addLogRow(date, elapsedSeconds){
@@ -860,11 +920,16 @@
     }
   });
 
+  cancelBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (measuring) cancelMeasurement();
+  });
+
   /* ---------------------------------------------------------
      Tab bar -> placeholder panels
      (real content for Wissen / Hilfe / Einstellungen follows later)
   --------------------------------------------------------- */
-  const APP_VERSION = '1.00';
+  const APP_VERSION = '1.01 (28.08.2026)';
 
   const overlay = document.getElementById('overlay');
   const panelTitle = document.getElementById('panelTitle');
