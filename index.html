@@ -7,9 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Gewitterabstand</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
 <style>
   :root{
     --bg: #080b1e;
@@ -33,7 +31,7 @@
     margin: 0;
     background: var(--bg);
     color: var(--text);
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: system-ui, sans-serif;
     overflow: hidden;
     overscroll-behavior: none;
   }
@@ -119,7 +117,7 @@
   }
 
   .btn-label{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: -apple-system, system-ui, sans-serif;
     font-weight: 700;
     font-size: clamp(30px, 13vw, 56px);
     line-height: 1.25;
@@ -135,7 +133,7 @@
     position: relative;
     z-index: 1;
     margin-top: 22px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: monospace;
     font-size: clamp(22px, 7vw, 30px);
     font-weight: 500;
     color: var(--text-muted);
@@ -183,7 +181,7 @@
 
   .log-header h2{
     margin: 0;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: -apple-system, system-ui, sans-serif; font-weight: 700;
     font-size: 15px;
     font-weight: 600;
     letter-spacing: 0.06em;
@@ -202,7 +200,7 @@
   table{
     width: 100%;
     border-collapse: collapse;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: monospace;
     font-size: 14px;
   }
 
@@ -211,7 +209,7 @@
     top: 0;
     background: var(--surface);
     text-align: left;
-    font-family: 'Inter', sans-serif;
+    font-family: sans-serif;
     font-weight: 600;
     font-size: 11px;
     letter-spacing: 0.08em;
@@ -237,7 +235,7 @@
   }
 
   tbody tr.empty-row td{
-    font-family: 'Inter', sans-serif;
+    font-family: sans-serif;
     color: var(--text-muted);
     text-align: center;
     padding: 28px 0;
@@ -282,7 +280,7 @@
   }
 
   .tab-item span{
-    font-family: 'Inter', sans-serif;
+    font-family: sans-serif;
     font-size: 11px;
     font-weight: 500;
   }
@@ -325,7 +323,7 @@
 
   .panel h3{
     margin: 0 0 10px;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: -apple-system, system-ui, sans-serif; font-weight: 700;
     font-size: 19px;
   }
 
@@ -380,7 +378,7 @@
     border: none;
     background: var(--surface-2);
     color: var(--text);
-    font-family: 'Inter', sans-serif;
+    font-family: sans-serif;
     font-weight: 600;
     font-size: 15px;
     cursor: pointer;
@@ -401,7 +399,7 @@
 
   .settings-label{
     display: block;
-    font-family: 'Inter', sans-serif;
+    font-family: sans-serif;
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.06em;
@@ -423,7 +421,7 @@
     border-radius: 12px;
     padding: 12px 40px 12px 14px;
     color: var(--text);
-    font-family: 'Inter', sans-serif;
+    font-family: sans-serif;
     font-weight: 600;
     font-size: 15px;
     cursor: pointer;
@@ -449,7 +447,7 @@
 
   .version-info{
     margin-top: 6px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: monospace;
     font-size: 12px;
     color: var(--text-muted);
     text-align: center;
