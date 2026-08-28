@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#080b1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Gewitterabstand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #080b1e;
+    --surface: #12162e;
+    --surface-2: #1b2140;
+    --border: #262d54;
+    --text: #eef1fb;
+    --text-muted: #8993bd;
+    --accent: #ffd93d;
+    --accent-dim: #6b6023;
+    --thunder: #ff7a45;
+    --thunder-dim: #5c3520;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body{
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body{
+    background-image:
+      radial-gradient(1200px 600px at 50% -10%, rgba(255, 217, 61, 0.06), transparent 60%),
+      radial-gradient(800px 500px at 80% 110%, rgba(255, 122, 69, 0.05), transparent 60%);
+  }
+
+  .app{
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding-top: var(--safe-top);
+  }
+
+  /* ---------- Section 1: measurement ---------- */
+  .measure-section{
+    flex: 1 1 50%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 12px 20px;
+  }
+
+  .rings-container{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .ring{
+    position: absolute;
+    border-radius: 50%;
+    border: 1.5px solid var(--thunder);
+    opacity: 0.55;
+    animation: ring-expand 1.6s ease-out forwards;
+  }
+
+  @keyframes ring-expand{
+    from{ width: 40px; height: 40px; opacity: 0.5; }
+    to{ width: 92vw; height: 92vw; max-width: 480px; max-height: 480px; opacity: 0; }
+  }
+
+  .strike-btn{
+    position: relative;
+    z-index: 1;
+    width: min(62vw, 46vh, 300px);
+    height: min(62vw, 46vh, 300px);
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 32% 28%, #202750, var(--surface) 70%);
+    box-shadow:
+      0 0 0 2px var(--border),
+      0 18px 40px rgba(0,0,0,0.45),
+      inset 0 0 30px rgba(255,255,255,0.02);
+    color: var(--accent);
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.25s ease, color 0.25s ease;
+  }
+
+  .strike-btn:active{
+    transform: scale(0.96);
+  }
+
+  .strike-btn.measuring{
+    color: var(--thunder);
+    box-shadow:
+      0 0 0 2px var(--thunder-dim),
+      0 0 45px rgba(255, 122, 69, 0.25),
+      0 18px 40px rgba(0,0,0,0.45);
+  }
+
+  .btn-label{
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: clamp(30px, 13vw, 56px);
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+    text-align: center;
+    max-width: 78%;
+    max-height: 78%;
+    word-break: break-word;
+    hyphens: auto;
+  }
+
+  .timer-readout{
+    position: relative;
+    z-index: 1;
+    margin-top: 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(22px, 7vw, 30px);
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.03em;
+    min-height: 1.2em;
+    transition: color 0.2s ease;
+  }
+
+  .timer-readout.active{
+    color: var(--thunder);
+  }
+
+  .flash{
+    position: fixed;
+    inset: 0;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 50;
+  }
+
+  .flash.fire{
+    animation: flash-pop 0.5s ease-out;
+  }
+
+  @keyframes flash-pop{
+    0%{ opacity: 0.9; }
+    100%{ opacity: 0; }
+  }
+
+  /* ---------- Section 2: log ---------- */
+  .log-section{
+    flex: 1 1 50%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .log-header{
+    padding: 14px 20px 10px;
+    flex: none;
+  }
+
+  .log-header h2{
+    margin: 0;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .table-wrap{
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 20px 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table{
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+  }
+
+  thead th{
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    text-align: left;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 6px 8px 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  thead th:last-child{ text-align: right; }
+
+  tbody td{
+    padding: 11px 8px 11px 0;
+    border-bottom: 1px solid rgba(38, 45, 84, 0.5);
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  tbody td:last-child{
+    text-align: right;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  tbody tr.empty-row td{
+    font-family: 'Inter', sans-serif;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 28px 0;
+    font-style: normal;
+  }
+
+  tbody tr.new-row{
+    animation: row-in 0.35s ease-out;
+  }
+
+  @keyframes row-in{
+    from{ background: rgba(255, 217, 61, 0.12); }
+    to{ background: transparent; }
+  }
+
+  /* ---------- Section 3: tab bar ---------- */
+  .tabbar{
+    flex: none;
+    display: flex;
+    border-top: 1px solid var(--border);
+    background: var(--surface-2);
+    padding-bottom: var(--safe-bottom);
+  }
+
+  .tab-item{
+    flex: 1;
+    background: none;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 9px 4px 8px;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .tab-item svg{
+    width: 23px;
+    height: 23px;
+  }
+
+  .tab-item span{
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .tab-item:active{
+    color: var(--accent);
+  }
+
+  /* ---------- Overlay panel ---------- */
+  .overlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 6, 16, 0.6);
+    display: flex;
+    align-items: flex-end;
+    z-index: 40;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .overlay.open{
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .panel{
+    width: 100%;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    padding: 22px 24px calc(24px + var(--safe-bottom));
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+  }
+
+  .overlay.open .panel{
+    transform: translateY(0);
+  }
+
+  .panel h3{
+    margin: 0 0 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 19px;
+  }
+
+  .panel p{
+    margin: 0 0 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .panel{
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  #panelHelpContent p{
+    margin-bottom: 14px;
+  }
+
+  #panelHelpContent p:last-child{
+    margin-bottom: 0;
+  }
+
+  .faq-item{
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .faq-item:first-of-type{
+    border-top: none;
+    padding-top: 4px;
+  }
+
+  .faq-question{
+    margin: 0 0 6px;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .faq-answer{
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+
+  .panel button{
+    width: 100%;
+    padding: 13px;
+    border-radius: 12px;
+    border: none;
+    background: var(--surface-2);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  #panelClose{
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-top: 20px;
+    padding-top: 13px;
+    border-top: 1px solid var(--border);
+  }
+
+  .settings-row{
+    margin-bottom: 22px;
+  }
+
+  .settings-label{
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  .lang-select-wrap{
+    position: relative;
+  }
+
+  .lang-select{
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 40px 12px 14px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  .lang-select:focus{
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .lang-select-wrap::after{
+    content: '';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid var(--text-muted);
+    border-bottom: 2px solid var(--text-muted);
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+  }
+
+  .version-info{
+    margin-top: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .ring, .flash.fire, tbody tr.new-row{ animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Section 1: measurement -->
+  <main class="measure-section">
+    <div class="rings-container" id="ringsContainer"></div>
+
+    <button class="strike-btn" id="strikeBtn" aria-live="polite">
+      <span class="btn-label" id="btnLabel" data-i18n="btnLightning">Blitz</span>
+    </button>
+
+    <div class="timer-readout" id="timerReadout">0,00 s</div>
+  </main>
+
+  <!-- Section 2: log -->
+  <section class="log-section">
+    <div class="log-header">
+      <h2 data-i18n="logTitle">Messungen</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-i18n="colTime">Uhrzeit</th>
+            <th data-i18n="colDuration">Dauer</th>
+            <th data-i18n="colDistance">Entfernung</th>
+          </tr>
+        </thead>
+        <tbody id="logBody">
+          <tr class="empty-row">
+            <td colspan="3" data-i18n="emptyState">Noch keine Messungen</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Section 3: tab bar -->
+  <nav class="tabbar">
+    <button class="tab-item" data-panel="knowledge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+      </svg>
+      <span data-i18n="tabKnowledge">Wissen</span>
+    </button>
+    <button class="tab-item" data-panel="help">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9.5"></circle>
+        <path d="M9.2 9.3a2.8 2.8 0 1 1 4.3 2.4c-.9.6-1.5 1.1-1.5 2.2"></path>
+        <circle cx="12" cy="16.8" r="0.4" fill="currentColor" stroke="none"></circle>
+      </svg>
+      <span data-i18n="tabHelp">Hilfe</span>
+    </button>
+    <button class="tab-item" data-panel="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3.2"></circle>
+        <path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 6.15 6.98a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09A1.7 1.7 0 0 0 11.64 1.06V.97a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56h.09a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.04h.09a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04z" transform="translate(-1.5 -1.5) scale(0.94)"></path>
+      </svg>
+      <span data-i18n="tabSettings">Einstellungen</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- Overlay panel for the three tab items -->
+<div class="overlay" id="overlay">
+  <div class="panel">
+    <h3 id="panelTitle"></h3>
+
+    <!-- Knowledge content: FAQ -->
+    <div id="panelKnowledgeContent">
+      <div class="faq-item">
+        <p class="faq-question" data-i18n="faqQ1">Wie schnell breitet sich der Schall aus?</p>
+        <p class="faq-answer" data-i18n="faqA1">Schall bewegt sich in der Luft mit rund 343 m/s (etwa 1.235 km/h) – deutlich langsamer als das Licht, das nahezu augenblicklich ankommt. Daher lässt sich aus dem Abstand zwischen Blitz und Donner die Entfernung berechnen.</p>
+      </div>
+
+      <div class="faq-item">
+        <p class="faq-question" data-i18n="faqQ2">Wie stark ist der Strom in einem Blitz?</p>
+        <p class="faq-answer" data-i18n="faqA2">Ein Blitz führt meist 20.000 bis 30.000 Ampere, in Extremfällen sogar über 100.000 Ampere – tausendmal mehr, als eine haushaltsübliche Sicherung verträgt.</p>
+      </div>
+
+      <div class="faq-item">
+        <p class="faq-question" data-i18n="faqQ5">Wie heiß wird ein Blitz?</p>
+        <p class="faq-answer" data-i18n="faqA5">Der Blitzkanal erreicht bis zu 30.000 °C – heißer als die Sonnenoberfläche. Die schlagartig erhitzte Luft dehnt sich explosionsartig aus und erzeugt dabei den Donner.</p>
+      </div>
+
+      <div class="faq-item">
+        <p class="faq-question" data-i18n="faqQ3">Wie laut kann Donner werden?</p>
+        <p class="faq-answer" data-i18n="faqA3">In der Nähe des Blitzkanals kann Donner 120 dB und mehr erreichen – vergleichbar mit einem startenden Flugzeug. Mit zunehmender Entfernung nimmt die Lautstärke schnell ab.</p>
+      </div>
+
+      <div class="faq-item">
+        <p class="faq-question" data-i18n="faqQ4">Erreicht jeder Blitz den Boden?</p>
+        <p class="faq-answer" data-i18n="faqA4">Nein. Etwa drei Viertel aller Blitze sind sogenannte Wolkenblitze, die innerhalb oder zwischen Gewitterwolken verlaufen und den Boden nie erreichen. Nur ein kleinerer Teil sind Erdblitze.</p>
+      </div>
+
+      <div class="faq-item">
+        <p class="faq-question" data-i18n="faqQ6">Ist man im Auto bei einem Gewitter sicher?</p>
+        <p class="faq-answer" data-i18n="faqA6">Ja. Die Karosserie wirkt wie ein Faradayscher Käfig und leitet den Strom außen um das Fahrzeug herum ab – solange man Metallteile im Innenraum nicht berührt.</p>
+      </div>
+    </div>
+
+    <!-- Help content -->
+    <div id="panelHelpContent" style="display:none;">
+      <p data-i18n="helpPara1">Ein Klick auf den Button „Blitz" startet eine Zeitmessung, ein Klick auf „Donner" beendet sie. Aus der gemessenen Zeit berechnet die App über die Schallgeschwindigkeit, wie weit der Blitz entfernt eingeschlagen ist.</p>
+      <p data-i18n="helpPara2">Es erfolgt keine Speicherung der Daten – die App wird bei jedem Öffnen neu initialisiert.</p>
+      <p data-i18n="helpPara3">In den Einstellungen kannst du die Sprache der App ändern.</p>
+    </div>
+
+    <!-- Settings content -->
+    <div id="panelSettingsContent" style="display:none;">
+      <div class="settings-row">
+        <span class="settings-label" data-i18n="settingsLanguageLabel">Sprache</span>
+        <div class="lang-select-wrap">
+          <select class="lang-select" id="langSelect">
+            <option value="de">Deutsch</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+      </div>
+      <div class="version-info" id="versionInfo">Version: 0.01</div>
+    </div>
+
+    <button id="panelClose" data-i18n="closeBtn">Schließen</button>
+  </div>
+</div>
+
+<div class="flash" id="flash"></div>
+
+<script>
+(function(){
+
+  /* ---------------------------------------------------------
+     i18n
+     Only "de" is active for now. "en" is prepared so the
+     interface can be switched later (e.g. from Einstellungen)
+     without touching the markup or logic.
+  --------------------------------------------------------- */
+  const translations = {
+    de: {
+      btnLightning: 'Blitz',
+      btnThunder: 'Donner',
+      logTitle: 'Messungen',
+      colTime: 'Uhrzeit',
+      colDuration: 'Dauer',
+      colDistance: 'Entfernung',
+      emptyState: 'Noch keine Messungen',
+      tabKnowledge: 'Wissen',
+      tabHelp: 'Hilfe',
+      tabSettings: 'Einstellungen',
+      panelPlaceholder: 'Dieser Bereich wird als Nächstes eingerichtet.',
+      closeBtn: 'Schließen',
+      helpPara1: 'Ein Klick auf den Button „Blitz" startet eine Zeitmessung, ein Klick auf „Donner" beendet sie. Aus der gemessenen Zeit berechnet die App über die Schallgeschwindigkeit, wie weit der Blitz entfernt eingeschlagen ist.',
+      helpPara2: 'Es erfolgt keine Speicherung der Daten – die App wird bei jedem Öffnen neu initialisiert.',
+      helpPara3: 'In den Einstellungen kannst du die Sprache der App ändern.',
+      faqQ1: 'Wie schnell breitet sich der Schall aus?',
+      faqA1: 'Schall bewegt sich in der Luft mit rund 343 m/s (etwa 1.235 km/h) – deutlich langsamer als das Licht, das nahezu augenblicklich ankommt. Daher lässt sich aus dem Abstand zwischen Blitz und Donner die Entfernung berechnen.',
+      faqQ2: 'Wie stark ist der Strom in einem Blitz?',
+      faqA2: 'Ein Blitz führt meist 20.000 bis 30.000 Ampere, in Extremfällen sogar über 100.000 Ampere – tausendmal mehr, als eine haushaltsübliche Sicherung verträgt.',
+      faqQ3: 'Wie laut kann Donner werden?',
+      faqA3: 'In der Nähe des Blitzkanals kann Donner 120 dB und mehr erreichen – vergleichbar mit einem startenden Flugzeug. Mit zunehmender Entfernung nimmt die Lautstärke schnell ab.',
+      faqQ4: 'Erreicht jeder Blitz den Boden?',
+      faqA4: 'Nein. Etwa drei Viertel aller Blitze sind sogenannte Wolkenblitze, die innerhalb oder zwischen Gewitterwolken verlaufen und den Boden nie erreichen. Nur ein kleinerer Teil sind Erdblitze.',
+      faqQ5: 'Wie heiß wird ein Blitz?',
+      faqA5: 'Der Blitzkanal erreicht bis zu 30.000 °C – heißer als die Sonnenoberfläche. Die schlagartig erhitzte Luft dehnt sich explosionsartig aus und erzeugt dabei den Donner.',
+      faqQ6: 'Ist man im Auto bei einem Gewitter sicher?',
+      faqA6: 'Ja. Die Karosserie wirkt wie ein Faradayscher Käfig und leitet den Strom außen um das Fahrzeug herum ab – solange man Metallteile im Innenraum nicht berührt.',
+      panelTitleKnowledge: 'Wissen zu Blitz und Donner',
+      panelTitleHelp: 'Hilfe',
+      panelTitleSettings: 'Einstellungen',
+      settingsLanguageLabel: 'Sprache',
+      versionLabel: 'Version',
+      timeSuffix: ' Uhr',
+      secondsUnit: 's',
+      metersUnit: 'm',
+      localeCode: 'de-DE',
+      hour12: false
+    },
+    en: {
+      btnLightning: 'Lightning',
+      btnThunder: 'Thunder',
+      logTitle: 'Measurements',
+      colTime: 'Time',
+      colDuration: 'Duration',
+      colDistance: 'Distance',
+      emptyState: 'No measurements yet',
+      tabKnowledge: 'Knowledge',
+      tabHelp: 'Help',
+      tabSettings: 'Settings',
+      panelPlaceholder: 'This section will be set up next.',
+      closeBtn: 'Close',
+      helpPara1: 'Tapping the "Lightning" button starts a time measurement, and tapping "Thunder" stops it. From the measured time, the app uses the speed of sound to calculate how far away the lightning struck.',
+      helpPara2: 'No data is stored — the app resets every time it is opened.',
+      helpPara3: 'You can change the app\'s language in Settings.',
+      faqQ1: 'How fast does sound travel?',
+      faqA1: 'Sound moves through air at about 343 m/s (roughly 1,235 km/h) — much slower than light, which arrives almost instantly. That is why the gap between lightning and thunder reveals the distance.',
+      faqQ2: 'How much current does a lightning bolt carry?',
+      faqA2: 'A lightning strike typically carries 20,000 to 30,000 amps, with extreme strikes exceeding 100,000 amps — thousands of times more than a household fuse can handle.',
+      faqQ3: 'How loud can thunder get?',
+      faqA3: 'Close to the lightning channel, thunder can reach 120 dB or more — about as loud as a jet taking off. It fades quickly with distance.',
+      faqQ4: 'Does every lightning bolt reach the ground?',
+      faqA4: 'No. About three-quarters of all lightning are cloud flashes that occur within or between storm clouds and never reach the ground. Only a smaller share are ground strikes.',
+      faqQ5: 'How hot does a lightning bolt get?',
+      faqA5: 'The lightning channel reaches up to 30,000 °C — hotter than the surface of the sun. The instantly heated air expands explosively, which is what creates the thunder.',
+      faqQ6: 'Is it safe to be in a car during a thunderstorm?',
+      faqA6: 'Yes. The metal body acts like a Faraday cage and channels the current around the outside of the vehicle — as long as you avoid touching metal parts inside.',
+      panelTitleKnowledge: 'Lightning & thunder facts',
+      panelTitleHelp: 'Help',
+      panelTitleSettings: 'Settings',
+      settingsLanguageLabel: 'Language',
+      versionLabel: 'Version',
+      timeSuffix: '',
+      secondsUnit: 's',
+      metersUnit: 'm',
+      localeCode: 'en-US',
+      hour12: true
+    }
+  };
+
+  let currentLang = 'de'; // switch to 'en' later, e.g. from the settings panel
+  const t = (key) => translations[currentLang][key];
+
+  function applyI18n(){
+    document.documentElement.lang = currentLang;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      el.textContent = t(el.getAttribute('data-i18n'));
+    });
+    // btnLabel's text depends on live state, not just its static data-i18n default
+    btnLabel.textContent = measuring ? t('btnThunder') : t('btnLightning');
+    fitButtonLabel();
+  }
+
+  /* ---------------------------------------------------------
+     Formatting helpers (locale-aware)
+  --------------------------------------------------------- */
+  function formatTime(date){
+    const timeStr = date.toLocaleTimeString(t('localeCode'), {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: t('hour12')
+    });
+    return timeStr + t('timeSuffix');
+  }
+
+  function formatDuration(seconds){
+    const str = seconds.toLocaleString(t('localeCode'), {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    return str + ' ' + t('secondsUnit');
+  }
+
+  function formatDistance(meters){
+    const str = Math.round(meters).toLocaleString(t('localeCode'));
+    return str + ' ' + t('metersUnit');
+  }
+
+  /* ---------------------------------------------------------
+     Measurement logic
+  --------------------------------------------------------- */
+  const SPEED_OF_SOUND = 343; // m/s
+
+  const strikeBtn = document.getElementById('strikeBtn');
+  const btnLabel = document.getElementById('btnLabel');
+  const timerReadout = document.getElementById('timerReadout');
+  const logBody = document.getElementById('logBody');
+  const ringsContainer = document.getElementById('ringsContainer');
+  const flashEl = document.getElementById('flash');
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let measuring = false;
+  let startTime = null;
+  let tickHandle = null;
+  let ringHandle = null;
+  const measurements = []; // newest first: { date: Date, elapsedSeconds: number }
+
+  function spawnRing(){
+    if (reducedMotion) return;
+    const ring = document.createElement('div');
+    ring.className = 'ring';
+    ringsContainer.appendChild(ring);
+    ring.addEventListener('animationend', () => ring.remove());
+  }
+
+  function fireFlash(){
+    if (reducedMotion) return;
+    flashEl.classList.remove('fire');
+    // restart animation
+    void flashEl.offsetWidth;
+    flashEl.classList.add('fire');
+  }
+
+  function vibrate(pattern){
+    if (navigator.vibrate) {
+      try { navigator.vibrate(pattern); } catch (e) { /* ignore */ }
+    }
+  }
+
+  function updateTimerDisplay(){
+    const elapsed = (performance.now() - startTime) / 1000;
+    timerReadout.textContent = formatDuration(elapsed);
+  }
+
+  function fitButtonLabel(){
+    btnLabel.style.fontSize = '';
+    requestAnimationFrame(() => {
+      const maxWidth = strikeBtn.clientWidth * 0.7;
+      const maxHeight = strikeBtn.clientHeight * 0.7;
+      let fontSize = parseFloat(getComputedStyle(btnLabel).fontSize);
+      let guard = 0;
+      while (
+        (btnLabel.scrollWidth > maxWidth || btnLabel.scrollHeight > maxHeight) &&
+        fontSize > 14 && guard < 60
+      ) {
+        fontSize -= 1;
+        btnLabel.style.fontSize = fontSize + 'px';
+        guard++;
+      }
+    });
+  }
+
+  window.addEventListener('resize', fitButtonLabel);
+
+  function startMeasurement(){
+    measuring = true;
+    startTime = performance.now();
+
+    strikeBtn.classList.add('measuring');
+    btnLabel.textContent = t('btnThunder');
+    fitButtonLabel();
+    timerReadout.classList.add('active');
+
+    fireFlash();
+    vibrate(15);
+
+    updateTimerDisplay();
+    tickHandle = setInterval(updateTimerDisplay, 30);
+    ringHandle = setInterval(spawnRing, 550);
+    spawnRing();
+  }
+
+  function stopMeasurement(){
+    measuring = false;
+    const elapsedSeconds = (performance.now() - startTime) / 1000;
+
+    clearInterval(tickHandle);
+    clearInterval(ringHandle);
+    tickHandle = null;
+    ringHandle = null;
+
+    strikeBtn.classList.remove('measuring');
+    btnLabel.textContent = t('btnLightning');
+    fitButtonLabel();
+    timerReadout.classList.remove('active');
+    timerReadout.textContent = formatDuration(0);
+
+    vibrate([15, 60, 15]);
+
+    addLogRow(new Date(), elapsedSeconds);
+  }
+
+  function addLogRow(date, elapsedSeconds){
+    measurements.unshift({ date, elapsedSeconds });
+    renderLog({ highlightFirst: true });
+  }
+
+  function renderLog(options){
+    const highlightFirst = options && options.highlightFirst;
+    logBody.innerHTML = '';
+
+    if (measurements.length === 0) {
+      const tr = document.createElement('tr');
+      tr.className = 'empty-row';
+      tr.innerHTML = '<td colspan="3" data-i18n="emptyState">' + t('emptyState') + '</td>';
+      logBody.appendChild(tr);
+      return;
+    }
+
+    measurements.forEach((m, index) => {
+      const distanceMeters = m.elapsedSeconds * SPEED_OF_SOUND;
+      const tr = document.createElement('tr');
+      if (highlightFirst && index === 0) tr.className = 'new-row';
+      tr.innerHTML =
+        '<td>' + formatTime(m.date) + '</td>' +
+        '<td>' + formatDuration(m.elapsedSeconds) + '</td>' +
+        '<td>' + formatDistance(distanceMeters) + '</td>';
+      logBody.appendChild(tr);
+    });
+  }
+
+  strikeBtn.addEventListener('click', () => {
+    if (measuring) {
+      stopMeasurement();
+    } else {
+      startMeasurement();
+    }
+  });
+
+  /* ---------------------------------------------------------
+     Tab bar -> placeholder panels
+     (real content for Wissen / Hilfe / Einstellungen follows later)
+  --------------------------------------------------------- */
+  const APP_VERSION = '1.00';
+
+  const overlay = document.getElementById('overlay');
+  const panelTitle = document.getElementById('panelTitle');
+  const panelClose = document.getElementById('panelClose');
+  const panelKnowledgeContent = document.getElementById('panelKnowledgeContent');
+  const panelHelpContent = document.getElementById('panelHelpContent');
+  const panelSettingsContent = document.getElementById('panelSettingsContent');
+  const versionInfo = document.getElementById('versionInfo');
+  const langSelect = document.getElementById('langSelect');
+
+  const panelTitleKeys = {
+    knowledge: 'panelTitleKnowledge',
+    help: 'panelTitleHelp',
+    settings: 'panelTitleSettings'
+  };
+
+  let currentPanel = null;
+
+  document.querySelectorAll('.tab-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentPanel = btn.getAttribute('data-panel');
+      renderPanel();
+      overlay.classList.add('open');
+    });
+  });
+
+  function renderPanel(){
+    if (!currentPanel) return;
+    panelTitle.textContent = t(panelTitleKeys[currentPanel]);
+
+    panelKnowledgeContent.style.display = currentPanel === 'knowledge' ? '' : 'none';
+    panelHelpContent.style.display = currentPanel === 'help' ? '' : 'none';
+    panelSettingsContent.style.display = currentPanel === 'settings' ? '' : 'none';
+
+    if (currentPanel === 'settings') {
+      langSelect.value = currentLang;
+      versionInfo.textContent = t('versionLabel') + ': ' + APP_VERSION;
+    }
+  }
+
+  langSelect.addEventListener('change', () => {
+    const lang = langSelect.value;
+    if (lang === currentLang) return;
+    currentLang = lang;
+    applyI18n();
+    renderLog();
+    renderPanel();
+  });
+
+  function closeOverlay(){
+    overlay.classList.remove('open');
+  }
+
+  panelClose.addEventListener('click', closeOverlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeOverlay();
+  });
+
+  /* ---------------------------------------------------------
+     Init
+  --------------------------------------------------------- */
+  applyI18n();
+  timerReadout.textContent = formatDuration(0);
+  fitButtonLabel();
+
+})();
+</script>
+
+</body>
+</html>
